@@ -3,7 +3,7 @@
   "uid": "pg-replication-health",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 6,
   "refresh": "15s",
   "time": { "from": "now-6h", "to": "now" },
   "panels": [
@@ -24,10 +24,10 @@
     },
     {
       "id": 2,
-      "title": "Active Replicas Connected",
+      "title": "Active Subscriptions",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "targets": [ { "expr": "count(pg_stat_replication_pg_current_wal_lsn_bytes)", "legendFormat": "replicas" } ]
+      "targets": [ { "expr": "count(pg_stat_subscription_detail_worker_running == 1)", "legendFormat": "running" } ]
     },
     {
       "id": 3,
@@ -38,36 +38,83 @@
     },
     {
       "id": 4,
-      "title": "Replication Slots (unused)",
+      "title": "Subscriptions Not Running",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "targets": [ { "expr": "count(pg_replication_slots_active == 0)", "legendFormat": "inactive slots" } ],
+      "targets": [ { "expr": "count(pg_stat_subscription_detail_worker_running == 0)", "legendFormat": "stopped" } ],
       "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "value": 0, "color": "green" }, { "value": 1, "color": "red" } ] } } }
     },
     {
       "id": 5,
-      "title": "Replication Lag (seconds)",
+      "title": "Subscription Lag (seconds, publisher send vs subscriber receive)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
-      "targets": [ { "expr": "pg_replication_lag_seconds", "legendFormat": "{{instance}} - {{application_name}}" } ],
+      "targets": [ { "expr": "pg_stat_subscription_detail_reported_lag_seconds", "legendFormat": "{{database}} - {{subname}}" } ],
       "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
       "thresholds": { "steps": [ { "value": 30, "color": "orange" }, { "value": 120, "color": "red" } ] }
     },
     {
       "id": 6,
-      "title": "Replication Lag (bytes, WAL diff)",
+      "title": "Seconds Since Last Message From Publisher",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
-      "targets": [ { "expr": "pg_stat_replication_pg_wal_lsn_diff", "legendFormat": "{{instance}} - {{application_name}}" } ],
-      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+      "targets": [ { "expr": "pg_stat_subscription_detail_seconds_since_last_msg", "legendFormat": "{{database}} - {{subname}}" } ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
     },
     {
       "id": 7,
-      "title": "Replication Slot Retained WAL (bytes)",
+      "title": "Subscription Worker Running (per subscription)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
-      "targets": [ { "expr": "pg_replication_slots_retained_bytes", "legendFormat": "{{slot_name}}" } ],
-      "fieldConfig": { "defaults": { "unit": "bytes" } }
+      "targets": [ { "expr": "pg_stat_subscription_detail_worker_running", "legendFormat": "{{database}} - {{subname}}" } ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10, "stepAfter": true } }, "max": 1, "min": 0 }
+    },
+    {
+      "id": 15,
+      "title": "Inactive Subscriptions (worker not running)",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "pg_stat_subscription_detail_worker_running == 0",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "server": true, "instance": true, "Value": true },
+            "renameByName": { "database": "Database", "subname": "Subscription" },
+            "indexByName": { "Database": 0, "Subscription": 1 }
+          }
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Databases With No Replication At All",
+      "type": "table",
+      "datasource": { "type": "postgres", "uid": "postgres-direct" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-direct" },
+          "format": "table",
+          "refId": "A",
+          "rawSql": "SELECT d.datname AS database FROM pg_database d WHERE d.datname NOT IN ('postgres','template0','template1') AND d.datallowconn AND NOT EXISTS (SELECT 1 FROM pg_subscription sub WHERE sub.subdbid = d.oid) ORDER BY d.datname"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": { "renameByName": { "database": "Database" } }
+        }
+      ]
     },
     {
       "id": 8,
@@ -81,30 +128,99 @@
       "id": 9,
       "title": "WAL Archiving Failures",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
       "targets": [ { "expr": "rate(pg_stat_archiver_detail_failed_count[5m])", "legendFormat": "{{instance}}" } ]
     },
     {
       "id": 10,
       "title": "Deadlocks",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
       "targets": [ { "expr": "rate(pg_stat_database_deadlocks[5m])", "legendFormat": "{{datname}}" } ]
-    },
-    {
-      "id": 11,
-      "title": "Database Size",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
-      "targets": [ { "expr": "pg_database_size_bytes", "legendFormat": "{{datname}}" } ],
-      "fieldConfig": { "defaults": { "unit": "bytes" } }
     },
     {
       "id": 12,
       "title": "Dead Tuples (bloat indicator)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
       "targets": [ { "expr": "pg_stat_user_tables_n_dead_tup", "legendFormat": "{{relname}}" } ]
+    },
+    {
+      "id": 13,
+      "title": "Subscription Detail (live, direct from Postgres)",
+      "type": "table",
+      "datasource": { "type": "postgres", "uid": "postgres-direct" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 44 },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-direct" },
+          "format": "table",
+          "refId": "A",
+          "rawSql": "SELECT s.subname, d.datname AS database, s.received_lsn::text AS received_lsn, s.latest_end_lsn::text AS latest_end_lsn, EXTRACT(EPOCH FROM (now() - s.last_msg_receipt_time)) AS seconds_since_last_msg, EXTRACT(EPOCH FROM (s.last_msg_receipt_time - s.last_msg_send_time)) AS reported_lag_seconds FROM pg_stat_subscription s JOIN pg_subscription sub ON sub.oid = s.subid JOIN pg_database d ON d.oid = sub.subdbid WHERE s.relid IS NULL ORDER BY s.subname"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Subscription Table Sync Status (per table, all databases)",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 54 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "pg_subscription_table_sync_state_numeric",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "server": true, "state_code": true, "Value": true },
+            "renameByName": {
+              "datname": "Database",
+              "subscription_name": "Subscription",
+              "schemaname": "Schema",
+              "table_name": "Table",
+              "sync_status": "Status",
+              "sync_lsn": "Sync LSN"
+            },
+            "indexByName": {
+              "Database": 0,
+              "Subscription": 1,
+              "Schema": 2,
+              "Table": 3,
+              "Status": 4,
+              "Sync LSN": 5
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Status" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": {
+                    "initializing": { "text": "🔄 Initializing", "color": "blue" },
+                    "copying_data": { "text": "📥 Copying data", "color": "orange" },
+                    "copy_finished": { "text": "✅ Copy finished", "color": "green" },
+                    "synchronized": { "text": "🔁 Synchronized", "color": "green" },
+                    "ready": { "text": "✅ Ready", "color": "green" }
+                  } }
+                ]
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

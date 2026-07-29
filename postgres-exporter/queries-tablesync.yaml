@@ -1,0 +1,53 @@
+pg_subscription_table_sync:
+  # This runs once per auto-discovered database (see the postgres-exporter-tablesync
+  # service in docker-compose.yml) because pg_subscription_rel is NOT a shared
+  # catalog - it only shows tables that live in the database you're connected to.
+  query: |
+    SELECT
+      sub.subname AS subscription_name,
+      n.nspname AS schemaname,
+      c.relname AS table_name,
+      sr.srsubstate AS state_code,
+      CASE sr.srsubstate
+        WHEN 'i' THEN 'initializing'
+        WHEN 'd' THEN 'copying_data'
+        WHEN 'f' THEN 'copy_finished'
+        WHEN 's' THEN 'synchronized'
+        WHEN 'r' THEN 'ready'
+        ELSE 'unknown'
+      END AS sync_status,
+      CASE sr.srsubstate
+        WHEN 'i' THEN 0
+        WHEN 'd' THEN 1
+        WHEN 'f' THEN 2
+        WHEN 's' THEN 3
+        WHEN 'r' THEN 4
+        ELSE -1
+      END AS state_numeric,
+      COALESCE(sr.srsublsn::text, '') AS sync_lsn
+    FROM pg_subscription_rel sr
+    JOIN pg_subscription sub ON sub.oid = sr.srsubid
+    JOIN pg_class c ON c.oid = sr.srrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+  metrics:
+    - subscription_name:
+        usage: "LABEL"
+        description: "Subscription name"
+    - schemaname:
+        usage: "LABEL"
+        description: "Schema of the subscribed table"
+    - table_name:
+        usage: "LABEL"
+        description: "Table name"
+    - state_code:
+        usage: "LABEL"
+        description: "Raw pg_subscription_rel state char (i/d/f/s/r)"
+    - sync_status:
+        usage: "LABEL"
+        description: "Human-readable sync state"
+    - state_numeric:
+        usage: "GAUGE"
+        description: "Numeric encoding of sync state: 0=initializing,1=copying_data,2=copy_finished,3=synchronized,4=ready"
+    - sync_lsn:
+        usage: "LABEL"
+        description: "LSN recorded at last sync state change for this table"

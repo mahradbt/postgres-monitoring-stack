@@ -9,12 +9,33 @@ services:
       DATA_SOURCE_USER: "${PG_USER}"
       DATA_SOURCE_PASS: "${PG_PASSWORD}"
       PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres-exporter/queries.yaml"
-      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
-      PG_EXPORTER_EXCLUDE_DATABASES: "postgres,template0,template1"
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "false"
+    command:
+      - "--no-collector.database"
     volumes:
       - ./postgres-exporter/queries.yaml:/etc/postgres-exporter/queries.yaml:ro
     ports:
       - "9187:9187"
+    networks:
+      - monitoring
+
+  postgres-exporter-tablesync:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: postgres-exporter-tablesync
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_URI: "${PG_HOST}:${PG_PORT}/${PG_DATABASE}?sslmode=${PG_SSLMODE}"
+      DATA_SOURCE_USER: "${PG_USER}"
+      DATA_SOURCE_PASS: "${PG_PASSWORD}"
+      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres-exporter/queries-tablesync.yaml"
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+      PG_EXPORTER_EXCLUDE_DATABASES: "postgres,template0,template1"
+      PG_EXPORTER_DISABLE_DEFAULT_METRICS: "true"
+      PG_EXPORTER_DISABLE_SETTINGS_METRICS: "true"
+    volumes:
+      - ./postgres-exporter/queries-tablesync.yaml:/etc/postgres-exporter/queries-tablesync.yaml:ro
+    ports:
+      - "9188:9187"
     networks:
       - monitoring
 
@@ -44,6 +65,12 @@ services:
       GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER}"
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD}"
       GF_USERS_ALLOW_SIGN_UP: "false"
+      PG_HOST: "${PG_HOST}"
+      PG_PORT: "${PG_PORT}"
+      PG_DATABASE: "${PG_DATABASE}"
+      PG_USER: "${PG_USER}"
+      PG_PASSWORD: "${PG_PASSWORD}"
+      PG_SSLMODE: "${PG_SSLMODE}"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro

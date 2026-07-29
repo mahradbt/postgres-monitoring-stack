@@ -36,6 +36,35 @@ pg_wal_receiver:
         usage: "GAUGE"
         description: "Seconds elapsed since the last message received from the primary"
 
+pg_stat_subscription_detail:
+  query: |
+    SELECT
+      s.subname,
+      d.datname AS database,
+      (s.pid IS NOT NULL)::int AS worker_running,
+      COALESCE(EXTRACT(EPOCH FROM (now() - s.last_msg_receipt_time)), 0) AS seconds_since_last_msg,
+      COALESCE(EXTRACT(EPOCH FROM (s.last_msg_receipt_time - s.last_msg_send_time)), 0) AS reported_lag_seconds
+    FROM pg_stat_subscription s
+    JOIN pg_subscription sub ON sub.oid = s.subid
+    JOIN pg_database d ON d.oid = sub.subdbid
+    WHERE s.relid IS NULL
+  metrics:
+    - subname:
+        usage: "LABEL"
+        description: "Subscription name"
+    - database:
+        usage: "LABEL"
+        description: "Database the subscription belongs to"
+    - worker_running:
+        usage: "GAUGE"
+        description: "1 if the subscription's apply worker is currently running"
+    - seconds_since_last_msg:
+        usage: "GAUGE"
+        description: "Seconds since this subscriber last received a message from the publisher"
+    - reported_lag_seconds:
+        usage: "GAUGE"
+        description: "Time gap between when the publisher sent and this subscriber received the last message"
+
 pg_stat_archiver_detail:
   query: |
     SELECT

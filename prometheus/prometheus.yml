@@ -26,3 +26,14 @@ scrape_configs:
     # - targets: ["postgres-exporter-replica:9187"]
     #   labels:
     #     instance: "replica-1"
+
+  - job_name: "postgres-tablesync"
+    # Dedicated exporter that fans out per-database (auto-discovery) to read
+    # pg_subscription_rel, which is not a shared catalog. Longer interval/timeout
+    # since it holds one connection per subscriber database.
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    static_configs:
+      - targets: ["postgres-exporter-tablesync:9187"]
+        labels:
+          instance: "primary"

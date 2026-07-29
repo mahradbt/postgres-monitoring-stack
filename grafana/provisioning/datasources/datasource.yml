@@ -7,3 +7,18 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: true
+
+  - name: Postgres (direct)
+    uid: postgres-direct
+    type: postgres
+    access: proxy
+    url: ${PG_HOST}:${PG_PORT}
+    database: ${PG_DATABASE}
+    user: ${PG_USER}
+    secureJsonData:
+      password: ${PG_PASSWORD}
+    jsonData:
+      sslmode: ${PG_SSLMODE}
+      postgresVersion: 1600
+    isDefault: false
+    editable: true
