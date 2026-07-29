@@ -1,0 +1,55 @@
+pg_replication_slots:
+  query: |
+    SELECT
+      slot_name,
+      slot_type,
+      active::int AS active,
+      COALESCE(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn), 0) AS retained_bytes
+    FROM pg_replication_slots
+  metrics:
+    - slot_name:
+        usage: "LABEL"
+        description: "Replication slot name"
+    - slot_type:
+        usage: "LABEL"
+        description: "physical or logical"
+    - active:
+        usage: "GAUGE"
+        description: "1 means the slot is currently in use by a standby/subscriber"
+    - retained_bytes:
+        usage: "GAUGE"
+        description: "Amount of WAL retained because of this slot (bytes). Continuous growth means the consumer is falling behind"
+
+pg_wal_receiver:
+  # This query only returns results on the standby itself (you need to connect
+  # a second exporter to the replica too for this metric to be collected from there)
+  query: |
+    SELECT
+      status,
+      COALESCE(EXTRACT(EPOCH FROM (now() - last_msg_receipt_time)), 0) AS seconds_since_last_msg
+    FROM pg_stat_wal_receiver
+  metrics:
+    - status:
+        usage: "LABEL"
+        description: "WAL receiver connection status on the standby"
+    - seconds_since_last_msg:
+        usage: "GAUGE"
+        description: "Seconds elapsed since the last message received from the primary"
+
+pg_stat_archiver_detail:
+  query: |
+    SELECT
+      archived_count,
+      failed_count,
+      COALESCE(EXTRACT(EPOCH FROM (now() - last_archived_time)), 0) AS seconds_since_last_archive
+    FROM pg_stat_archiver
+  metrics:
+    - archived_count:
+        usage: "COUNTER"
+        description: "Total number of WAL segments archived"
+    - failed_count:
+        usage: "COUNTER"
+        description: "Number of failed attempts to archive WAL"
+    - seconds_since_last_archive:
+        usage: "GAUGE"
+        description: "Seconds elapsed since the last successful WAL archive"

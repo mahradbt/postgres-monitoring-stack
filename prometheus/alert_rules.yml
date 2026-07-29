@@ -1,0 +1,47 @@
+groups:
+  - name: postgres-replication
+    rules:
+      - alert: PostgresReplicationLagHigh
+        expr: pg_replication_lag_seconds > 30
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Replication lag above 30 seconds on {{ $labels.instance }}"
+          description: "Replication lag has been above 30 seconds for 2 minutes."
+
+      - alert: PostgresReplicationLagCritical
+        expr: pg_replication_lag_seconds > 120
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical replication lag on {{ $labels.instance }}"
+          description: "Replication lag is above 2 minutes. Possibly a network outage/slowdown or heavy load on the primary."
+
+      - alert: PostgresReplicationDown
+        expr: pg_stat_replication_pg_current_wal_lsn_bytes == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No standby connected to the primary"
+          description: "The pg_stat_replication metric came back empty, meaning no replica is likely connected."
+
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is unreachable ({{ $labels.instance }})"
+          description: "postgres_exporter couldn't connect to the database."
+
+      - alert: PostgresReplicationSlotUnused
+        expr: pg_replication_slots_active == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "A replication slot is inactive"
+          description: "An inactive slot causes WAL to accumulate and fills up disk on the primary."

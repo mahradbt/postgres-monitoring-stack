@@ -1,0 +1,110 @@
+{
+  "title": "PostgreSQL - Replication & Health",
+  "uid": "pg-replication-health",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "PostgreSQL Up",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [ { "expr": "pg_up", "legendFormat": "{{instance}}" } ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" } } },
+            { "type": "value", "options": { "1": { "text": "UP", "color": "green" } } }
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Active Replicas Connected",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [ { "expr": "count(pg_stat_replication_pg_current_wal_lsn_bytes)", "legendFormat": "replicas" } ]
+    },
+    {
+      "id": 3,
+      "title": "Active Connections",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [ { "expr": "sum(pg_stat_activity_count)", "legendFormat": "connections" } ]
+    },
+    {
+      "id": 4,
+      "title": "Replication Slots (unused)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [ { "expr": "count(pg_replication_slots_active == 0)", "legendFormat": "inactive slots" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "value": 0, "color": "green" }, { "value": 1, "color": "red" } ] } } }
+    },
+    {
+      "id": 5,
+      "title": "Replication Lag (seconds)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [ { "expr": "pg_replication_lag_seconds", "legendFormat": "{{instance}} - {{application_name}}" } ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "thresholds": { "steps": [ { "value": 30, "color": "orange" }, { "value": 120, "color": "red" } ] }
+    },
+    {
+      "id": 6,
+      "title": "Replication Lag (bytes, WAL diff)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [ { "expr": "pg_stat_replication_pg_wal_lsn_diff", "legendFormat": "{{instance}} - {{application_name}}" } ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+    },
+    {
+      "id": 7,
+      "title": "Replication Slot Retained WAL (bytes)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [ { "expr": "pg_replication_slots_retained_bytes", "legendFormat": "{{slot_name}}" } ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "id": 8,
+      "title": "WAL Receiver: Seconds Since Last Message (standby only)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [ { "expr": "pg_wal_receiver_seconds_since_last_msg", "legendFormat": "{{instance}}" } ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 9,
+      "title": "WAL Archiving Failures",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [ { "expr": "rate(pg_stat_archiver_detail_failed_count[5m])", "legendFormat": "{{instance}}" } ]
+    },
+    {
+      "id": 10,
+      "title": "Deadlocks",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [ { "expr": "rate(pg_stat_database_deadlocks[5m])", "legendFormat": "{{datname}}" } ]
+    },
+    {
+      "id": 11,
+      "title": "Database Size",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+      "targets": [ { "expr": "pg_database_size_bytes", "legendFormat": "{{datname}}" } ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "id": 12,
+      "title": "Dead Tuples (bloat indicator)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "targets": [ { "expr": "pg_stat_user_tables_n_dead_tup", "legendFormat": "{{relname}}" } ]
+    }
+  ]
+}

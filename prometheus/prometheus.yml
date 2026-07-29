@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+        labels:
+          instance: "primary"
+    # If you also have a standby server, add a second postgres-exporter service
+    # (e.g. postgres-exporter-replica) in docker-compose.yml
+    # and add a new target here with a different instance label:
+    # - targets: ["postgres-exporter-replica:9187"]
+    #   labels:
+    #     instance: "replica-1"
