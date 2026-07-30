@@ -3,7 +3,7 @@
   "uid": "pg-replication-health",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 6,
+  "version": 7,
   "refresh": "15s",
   "time": { "from": "now-6h", "to": "now" },
   "panels": [
@@ -143,7 +143,7 @@
       "title": "Dead Tuples (bloat indicator)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
-      "targets": [ { "expr": "pg_stat_user_tables_n_dead_tup", "legendFormat": "{{relname}}" } ]
+      "targets": [ { "expr": "pg_dead_tuples_detail_n_dead_tup", "legendFormat": "{{datname}} - {{schemaname}}.{{table_name}}" } ]
     },
     {
       "id": 13,

@@ -4,6 +4,7 @@ pg_subscription_table_sync:
   # catalog - it only shows tables that live in the database you're connected to.
   query: |
     SELECT
+      current_database() AS datname,
       sub.subname AS subscription_name,
       n.nspname AS schemaname,
       c.relname AS table_name,
@@ -30,6 +31,9 @@ pg_subscription_table_sync:
     JOIN pg_class c ON c.oid = sr.srrelid
     JOIN pg_namespace n ON n.oid = c.relnamespace
   metrics:
+    - datname:
+        usage: "LABEL"
+        description: "Database this subscription belongs to"
     - subscription_name:
         usage: "LABEL"
         description: "Subscription name"
@@ -51,3 +55,33 @@ pg_subscription_table_sync:
     - sync_lsn:
         usage: "LABEL"
         description: "LSN recorded at last sync state change for this table"
+
+pg_dead_tuples_detail:
+  # Also runs once per auto-discovered database, for the same reason as above:
+  # pg_stat_user_tables only shows tables in whichever database the connection
+  # is in, and the main exporter deliberately never connects to the tenant DBs.
+  query: |
+    SELECT
+      current_database() AS datname,
+      schemaname,
+      relname AS table_name,
+      n_live_tup,
+      n_dead_tup
+    FROM pg_stat_user_tables
+    WHERE n_dead_tup > 0
+  metrics:
+    - datname:
+        usage: "LABEL"
+        description: "Database this table belongs to"
+    - schemaname:
+        usage: "LABEL"
+        description: "Schema name"
+    - table_name:
+        usage: "LABEL"
+        description: "Table name"
+    - n_live_tup:
+        usage: "GAUGE"
+        description: "Estimated live row count"
+    - n_dead_tup:
+        usage: "GAUGE"
+        description: "Estimated dead row count (bloat indicator)"

@@ -29,10 +29,12 @@ scrape_configs:
 
   - job_name: "postgres-tablesync"
     # Dedicated exporter that fans out per-database (auto-discovery) to read
-    # pg_subscription_rel, which is not a shared catalog. Longer interval/timeout
-    # since it holds one connection per subscriber database.
-    scrape_interval: 30s
-    scrape_timeout: 25s
+    # pg_subscription_rel and pg_stat_user_tables, neither of which are shared
+    # catalogs. Runs 2 queries sequentially across ~60 databases (~90s measured),
+    # so this needs a much longer interval/timeout than the main "postgres" job.
+    # This data (sync status, dead tuples) doesn't need second-level freshness.
+    scrape_interval: 180s
+    scrape_timeout: 150s
     static_configs:
       - targets: ["postgres-exporter-tablesync:9187"]
         labels:
