@@ -20,22 +20,6 @@ pg_replication_slots:
         usage: "GAUGE"
         description: "Amount of WAL retained because of this slot (bytes). Continuous growth means the consumer is falling behind"
 
-pg_wal_receiver:
-  # This query only returns results on the standby itself (you need to connect
-  # a second exporter to the replica too for this metric to be collected from there)
-  query: |
-    SELECT
-      status,
-      COALESCE(EXTRACT(EPOCH FROM (now() - last_msg_receipt_time)), 0) AS seconds_since_last_msg
-    FROM pg_stat_wal_receiver
-  metrics:
-    - status:
-        usage: "LABEL"
-        description: "WAL receiver connection status on the standby"
-    - seconds_since_last_msg:
-        usage: "GAUGE"
-        description: "Seconds elapsed since the last message received from the primary"
-
 pg_stat_subscription_detail:
   query: |
     SELECT

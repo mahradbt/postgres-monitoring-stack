@@ -119,14 +119,6 @@
       ]
     },
     {
-      "id": 8,
-      "title": "WAL Receiver: Seconds Since Last Message (standby only)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
-      "targets": [ { "expr": "pg_wal_receiver_seconds_since_last_msg", "legendFormat": "{{instance}}" } ],
-      "fieldConfig": { "defaults": { "unit": "s" } }
-    },
-    {
       "id": 9,
       "title": "WAL Archiving Failures",
       "type": "timeseries",
