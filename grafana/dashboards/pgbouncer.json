@@ -1,0 +1,179 @@
+{
+  "title": "PgBouncer - Pool & Connection Health",
+  "uid": "pgbouncer-health",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "PgBouncer Up",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [ { "expr": "pgbouncer_up", "legendFormat": "{{instance}}" } ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" } } },
+            { "type": "value", "options": { "1": { "text": "UP", "color": "green" } } }
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Total Pools",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [ { "expr": "sum(pgbouncer_pools) by (instance)", "legendFormat": "{{instance}}" } ]
+    },
+    {
+      "id": 3,
+      "title": "Clients Waiting",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [ { "expr": "sum(pgbouncer_pools_client_waiting_connections) by (instance)", "legendFormat": "{{instance}}" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "value": 0, "color": "green" }, { "value": 1, "color": "orange" }, { "value": 10, "color": "red" } ] } } }
+    },
+    {
+      "id": 4,
+      "title": "Max Client Wait Time",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [ { "expr": "max(pgbouncer_pools_client_maxwait_seconds) by (instance)", "legendFormat": "{{instance}}" } ],
+      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "steps": [ { "value": 0, "color": "green" }, { "value": 1, "color": "orange" }, { "value": 5, "color": "red" } ] } } }
+    },
+    {
+      "id": 5,
+      "title": "Client Connections (Active / Waiting)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        { "expr": "pgbouncer_pools_client_active_connections", "legendFormat": "{{instance}} - {{database}} active" },
+        { "expr": "pgbouncer_pools_client_waiting_connections", "legendFormat": "{{instance}} - {{database}} waiting" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+    },
+    {
+      "id": 6,
+      "title": "Server Connections (Active / Idle / Used / Login)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "expr": "pgbouncer_pools_server_active_connections", "legendFormat": "{{instance}} - {{database}} active" },
+        { "expr": "pgbouncer_pools_server_idle_connections", "legendFormat": "{{instance}} - {{database}} idle" },
+        { "expr": "pgbouncer_pools_server_used_connections", "legendFormat": "{{instance}} - {{database}} used" },
+        { "expr": "pgbouncer_pools_server_login_connections", "legendFormat": "{{instance}} - {{database}} login" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+    },
+    {
+      "id": 7,
+      "title": "Pool Connections vs Configured Max",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        { "expr": "pgbouncer_databases_current_connections", "legendFormat": "{{instance}} - {{database}} current" },
+        { "expr": "pgbouncer_databases_max_connections", "legendFormat": "{{instance}} - {{database}} max" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+    },
+    {
+      "id": 8,
+      "title": "Avg Client Wait Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        { "expr": "rate(pgbouncer_stats_totals_client_wait_seconds_total[5m])", "legendFormat": "{{instance}} - {{database}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+    },
+    {
+      "id": 9,
+      "title": "Avg Query Duration",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [
+        { "expr": "rate(pgbouncer_stats_totals_queries_duration_seconds_total[5m]) / clamp_min(rate(pgbouncer_stats_totals_queries_pooled_total[5m]), 1)", "legendFormat": "{{instance}} - {{database}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+    },
+    {
+      "id": 10,
+      "title": "Queries Per Second",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        { "expr": "rate(pgbouncer_stats_totals_queries_pooled_total[5m])", "legendFormat": "{{instance}} - {{database}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+    },
+    {
+      "id": 11,
+      "title": "Pool Detail (live snapshot)",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
+      "options": { "sortBy": [ { "displayName": "Instance", "desc": false } ] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "pgbouncer_pools_client_active_connections",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "pgbouncer_pools_client_waiting_connections",
+          "format": "table",
+          "instant": true,
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "pgbouncer_pools_server_active_connections",
+          "format": "table",
+          "instant": true,
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "pgbouncer_pools_server_idle_connections",
+          "format": "table",
+          "instant": true,
+          "refId": "D"
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true },
+            "renameByName": {
+              "instance": "Instance",
+              "database": "Database",
+              "user": "User",
+              "Value #A": "Client Active",
+              "Value #B": "Client Waiting",
+              "Value #C": "Server Active",
+              "Value #D": "Server Idle"
+            },
+            "indexByName": {
+              "Instance": 0,
+              "Database": 1,
+              "User": 2,
+              "Client Active": 3,
+              "Client Waiting": 4,
+              "Server Active": 5,
+              "Server Idle": 6
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -27,6 +27,12 @@ scrape_configs:
     #   labels:
     #     instance: "replica-1"
 
+  - job_name: "pgbouncer"
+    static_configs:
+      - targets: ["10.200.253.12:9127"]
+        labels:
+          instance: "pgbouncer-devremote"
+
   - job_name: "postgres-tablesync"
     # Dedicated exporter that fans out per-database (auto-discovery) to read
     # pg_subscription_rel and pg_stat_user_tables, neither of which are shared
